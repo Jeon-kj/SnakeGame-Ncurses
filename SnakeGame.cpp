@@ -18,6 +18,7 @@ using namespace std;
 #define SBody 4
 #define GItem 5
 #define PItem 6
+#define Gate 7
 
 int snake_length;
 int max_snake_length = 20;
@@ -29,6 +30,7 @@ int ms_snake_length;
 int ms_GItem;
 int ms_PItem;
 int ms_Gate;
+int pass_gate = 0;
 
 bool game_running = true;
 bool game_state;
@@ -62,6 +64,17 @@ public:
 	}
 };
 
+class GateC {
+public:
+	pair<int, int> gate_rc;
+	string wall_dir = "wasd";
+
+	void init(int row, int col){
+		gate_rc = make_pair(row, col);
+	}
+};
+
+vector<GateC> gateVT;
 Snake& MakeSnake(Snake *s);
 vector<Snake> snakeVT;
 void SetMap();
@@ -72,8 +85,11 @@ void ShowScore();
 void ShowMission();
 void MoveSnake();
 void MakeItem();
-void SetItem();	
+void SetItem();
 void GameOver();
+void MakeGate();
+void SetGate();
+void GetGate();
 void run();
 
 Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 호출.
@@ -92,6 +108,11 @@ Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 �
 }
 
 void SetMap(){		// 처음에 뱀과 맵을 구현.
+	clear();
+	for(int i=0; i<map_rows; i++)
+		for(int j=0; j<map_cols; j++)
+			map[i][j]=0;
+
 	switch (stage)
 	{
 	case 1:
@@ -121,6 +142,8 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	break;
 
 	case 2:
+	snakeVT.clear();
+	gateVT.clear();
 	snake_length = 0;
 	get_GItem = 0;
 	get_PItem = 0;
@@ -147,7 +170,7 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	}
 	break;
 	case 3:
-        snake_length = 0;
+	snake_length = 0;
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
@@ -157,22 +180,23 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	ms_PItem = 7;
 	ms_Gate = 7;
 
-      for(int i=0; i<map_rows; i++){
-	for(int j=0; j<map_cols; j++){
-	if(i <= 1) map[i][j]++;
-	if(i >= map_rows-2) map[i][j]++;
-	if(j <= 1) map[i][j]++;
-	if(j >= map_cols-2) map[i][j]++;
+    for(int i=0; i<map_rows; i++){
+		for(int j=0; j<map_cols; j++){
+			if(i <= 1) map[i][j]++;
+			if(i >= map_rows-2) map[i][j]++;
+			if(j <= 1) map[i][j]++;
+			if(j >= map_cols-2) map[i][j]++;
 
-	if(i > 1 && i < map_rows-2 && (j!=9&&j!=10&&j!=11&&j!=12&&i%4==1) && !(i > map_rows/2-1 && i < map_rows/2+1)) map[i][j]++;
-	if(i == map_rows/2 && j == map_cols/2) {
-		snakeVT.push_back(MakeSnake());
-		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-	 }
-    }
-}
+			if(i > 1 && i < map_rows-2 && (j != 9 && j != 10 && j != 11 && j != 12 && i % 4 == 1) && !(i > map_rows/2-1 && i < map_rows/2+1)) map[i][j]++;
+			if(i == map_rows/2 && j == map_cols/2) {
+				snakeVT.push_back(MakeSnake());
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+			}
+		}
+	}
 	break;
+
 	case 4:
 	snake_length = 0;
 	get_GItem = 0;
@@ -185,23 +209,21 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	ms_Gate = 9;
 	for(int i=0; i<map_rows; i++){
 		for(int j=0; j<map_cols; j++){
-		if(i <= 1) map[i][j]++;
-		if(i >= map_rows-2) map[i][j]++;
-		if(j <= 1) map[i][j]++;
-		if(j >= map_cols-2) map[i][j]++;
+			if(i <= 1) map[i][j]++;
+			if(i >= map_rows-2) map[i][j]++;
+			if(j <= 1) map[i][j]++;
+			if(j >= map_cols-2) map[i][j]++;
 
-		if(i > 1 && i < map_rows-2 &&  j%3==0 && i%4!=0) map[i][j]++;
-		if(i == map_rows/2 && j == map_cols/2) {
-			snakeVT.push_back(MakeSnake());
-			snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-			snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-		 }
+			if(i > 1 && i < map_rows-2 &&  j%3 == 0 && i%4 != 0) map[i][j]++;
+			if(i == map_rows/2 && j == map_cols/2) {
+				snakeVT.push_back(MakeSnake());
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+			}
 	    }
 	}
 	break;
-
 	}
-		
 }
 
 void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 동기화하는 코드. 
@@ -211,15 +233,23 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 		snakeVT.pop_back();
 		snake_length--;
 		get_PItem++;
+		if(pass_gate != 0)
+			pass_gate--;
 		
-		if(snake_length < 3) GameOver(); //Game Over
+		if(snake_length < 3) GameOver();
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == GItem){
 		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
 		get_GItem++;
+		if(pass_gate != 0)
+			pass_gate++;
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == Wall){
-		GameOver(); // Game Over
+		GameOver();
+	}
+	else if(map[snake.snake_rc.first][snake.snake_rc.second] == Gate){
+		GetGate();
+		pass_gate = snake_length;
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == SBody){
 		GameOver(); // 이거 왜 안 되지?? 이거 안 돼서 저기 아래, 12 행 아래 처리해줌.
@@ -291,6 +321,11 @@ void ShowMap(){
 				mvwprintw(GameMap,i,j,"P");
 				wattroff(GameMap,COLOR_PAIR(3));
             }
+			else if(map[i][j] == Gate){
+				wattron(GameMap,COLOR_PAIR(3));
+				mvwprintw(GameMap,i,j,"O");
+				wattroff(GameMap,COLOR_PAIR(3));
+			}
         }
     }
 	wrefresh(GameMap);
@@ -424,6 +459,7 @@ void MakeItem(){
 void SetItem(){
 	while(1){
 		int row, col;
+
 		srand(clock());
 		row = rand() % (map_rows-4) + 2;
 		srand(clock());
@@ -437,7 +473,6 @@ void SetItem(){
 			map[row][col] = item_kind;
 			break;
 		}
-
 	}
 }
 
@@ -461,8 +496,147 @@ void GameOver(){
 	endwin();
 }
 
+void MakeGate(){
+	while(!gateVT.empty()){
+		map[gateVT.back().gate_rc.first][gateVT.back().gate_rc.second] = Wall;
+		gateVT.pop_back();
+	}
+			
+    for(int i = 0; i<2; i++)
+        SetGate();
+}
+
+void SetGate(){
+	while(1){
+		int row, col;
+		GateC *gate = new GateC;
+		
+		srand(clock());
+		row = rand() % (map_rows-2) + 1;
+		srand(clock());
+		col = rand() % (map_cols-2) + 1;
+		srand(clock());
+
+		if(map[row][col]==Wall){
+			gate->init(row, col);
+
+			gateVT.push_back(*gate);
+			map[row][col] = Gate;
+			delete gate;
+			break;
+		}
+	}
+}
+
+void GetGate(){
+	get_Gate++;
+	GateC *out_gate;
+	if(snakeVT.front().snake_rc == gateVT.front().gate_rc) out_gate = &gateVT.back();
+	else if(snakeVT.front().snake_rc == gateVT.back().gate_rc) out_gate = &gateVT.front();
+
+	out_gate->wall_dir = "wasd";
+	int row = out_gate->gate_rc.first;
+	int col = out_gate->gate_rc.second;
+	int pos;
+	if(map[row-1][col]==Wall || map[row-1][col]==IWall || map[row-1][col]==Gate){
+		pos = out_gate->wall_dir.find('w');
+		out_gate->wall_dir.erase(pos, 1);
+	}
+	if(map[row][col-1]==Wall || map[row][col-1]==IWall || map[row][col-1]==Gate){
+		pos = out_gate->wall_dir.find('a');
+		out_gate->wall_dir.erase(pos, 1);
+	}
+	if(map[row+1][col]==Wall || map[row+1][col]==IWall || map[row+1][col]==Gate){
+		pos = out_gate->wall_dir.find('s');
+		out_gate->wall_dir.erase(pos, 1);
+	}
+	if(map[row][col+1]==Wall || map[row][col+1]==IWall || map[row][col+1]==Gate){
+		pos = out_gate->wall_dir.find('d');
+		out_gate->wall_dir.erase(pos, 1);
+	}
+
+	switch(snakeVT.front().dir){
+		case 'w':
+			if(out_gate->wall_dir.find('w') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 'w';
+			}
+			else if(out_gate->wall_dir.find('d') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second+1);
+				snakeVT.front().dir = 'd';
+			}
+			else if(out_gate->wall_dir.find('a') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second-1);
+				snakeVT.front().dir = 'a';
+			}
+			else{
+				snakeVT.front().move(out_gate->gate_rc.first+1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 's';
+			}
+			break;
+
+		case 'a':
+			if(out_gate->wall_dir.find('a') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second-1);
+				snakeVT.front().dir = 'a';
+			}
+			else if(out_gate->wall_dir.find('w') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 'w';
+			}
+			else if(out_gate->wall_dir.find('s') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first+1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 's';
+			}
+			else{
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second+1);
+				snakeVT.front().dir = 'd';
+			}
+			break;
+
+		case 's':
+			if(out_gate->wall_dir.find('s') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first+1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 's';
+			}
+			else if(out_gate->wall_dir.find('a') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second-1);
+				snakeVT.front().dir = 'a';
+			}
+			else if(out_gate->wall_dir.find('d') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second+1);
+				snakeVT.front().dir = 'd';
+			}
+			else{
+				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 'w';
+			}
+			break;
+
+		case 'd':
+			if(out_gate->wall_dir.find('d') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second+1);
+				snakeVT.front().dir = 'd';
+			}
+			else if(out_gate->wall_dir.find('s') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first+1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 's';
+			}
+			else if(out_gate->wall_dir.find('w') != -1){
+				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 'w';
+			}
+			else{
+				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().dir = 'a';
+			}
+			break;
+	}
+}
+
 void run(){
-    int tick = 0;
+    int tick = 0;		//뱀의 움직임과 아이템 생성에 영향을 미치는 틱
+	int Gtick = 0;		//게이트 생성에 영향을 미치는 틱
 	
 	initscr();
 	
@@ -474,11 +648,20 @@ void run(){
   	curs_set(0);
 
 	while(game_running){
-		if(tick % 10 == 0){
+		if(tick % 10 == 0)		//뱀이 10번 움직이면 아이템 생성 (0.5초에 1번 움직이니까 5초 주기)
 			MakeItem();
-		}
+		
+		if(Gtick % 20 == 0 && pass_gate == 0)		//뱀이 게이트를 지나지 않을 때, 재생성.
+			MakeGate();
+		
 		MoveSnake();
 		ShowGame();
+		if(pass_gate != 0)		//뱀이 움직일 때마다 게이트 이용해야하는 몸의 길이는 줄어들음.
+			pass_gate--;
+
+		if(Gtick % 20 != 0 || pass_gate == 0)		//게이트가 바뀔 때가 됐는데 뱀이 게이트를 지날때는 Gtick이 오르지 않는다.
+			Gtick++;								//뱀이 다 지나가면 바로 게이트가 바뀌도록.
+
 		tick++;
 	}
 	endwin();
