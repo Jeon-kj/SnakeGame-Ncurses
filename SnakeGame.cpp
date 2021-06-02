@@ -147,8 +147,57 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	}
 	break;
 	case 3:
+        snake_length = 0;
+	get_GItem = 0;
+	get_PItem = 0;
+	get_Gate = 0;
+
+	ms_snake_length = 14;
+	ms_GItem = 11;
+	ms_PItem = 7;
+	ms_Gate = 7;
+
+      for(int i=0; i<map_rows; i++){
+	for(int j=0; j<map_cols; j++){
+	if(i <= 1) map[i][j]++;
+	if(i >= map_rows-2) map[i][j]++;
+	if(j <= 1) map[i][j]++;
+	if(j >= map_cols-2) map[i][j]++;
+
+	if(i > 1 && i < map_rows-2 && (j!=9&&j!=10&&j!=11&&j!=12&&i%4==1) && !(i > map_rows/2-1 && i < map_rows/2+1)) map[i][j]++;
+	if(i == map_rows/2 && j == map_cols/2) {
+		snakeVT.push_back(MakeSnake());
+		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+	 }
+    }
+}
 	break;
 	case 4:
+	snake_length = 0;
+	get_GItem = 0;
+	get_PItem = 0;
+	get_Gate = 0;
+
+	ms_snake_length = 18;
+	ms_GItem = 14;
+	ms_PItem = 9;
+	ms_Gate = 9;
+	for(int i=0; i<map_rows; i++){
+		for(int j=0; j<map_cols; j++){
+		if(i <= 1) map[i][j]++;
+		if(i >= map_rows-2) map[i][j]++;
+		if(j <= 1) map[i][j]++;
+		if(j >= map_cols-2) map[i][j]++;
+
+		if(i > 1 && i < map_rows-2 &&  j%3==0 && i%4!=0) map[i][j]++;
+		if(i == map_rows/2 && j == map_cols/2) {
+			snakeVT.push_back(MakeSnake());
+			snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+			snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+		 }
+	    }
+	}
 	break;
 
 	}
