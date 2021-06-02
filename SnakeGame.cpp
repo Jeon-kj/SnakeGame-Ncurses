@@ -2,7 +2,6 @@
 #include<iostream>
 #include<locale.h>
 #include<vector>
-//#include<conio.h>
 #include <unistd.h>
 #include <string>
 #include <cstring>
@@ -20,16 +19,25 @@ using namespace std;
 #define GItem 5
 #define PItem 6
 
-int score = 0;
+int snake_length;
+int max_snake_length = 20;
+int get_GItem;
+int get_PItem;
+int get_Gate;
 int map[map_rows][map_cols]={0};
-int snake_length = 0;
-bool game_state = true;
-int stage = 2;
+int ms_snake_length;
+int ms_GItem;
+int ms_PItem;
+int ms_Gate;
 
-string error = "";
-int errorcheck = 0;
+bool game_running = true;
+bool game_state;
+int stage = 1;
+
 WINDOW *GameMap;
 WINDOW *GameScore;
+WINDOW *GameMission;
+WINDOW *GameEnd;
 
 class Snake {		//뱀의 길이가 늘어날 때 필요한 클래스.
 public:
@@ -55,13 +63,18 @@ public:
 };
 
 Snake& MakeSnake(Snake *s);
+vector<Snake> snakeVT;
 void SetMap();
 void VTmatchMap();
+void ShowGame();
+void ShowMap();
+void ShowScore();
+void ShowMission();
 void MoveSnake();
-vector<Snake> snakeVT;
 void MakeItem();
-void SetItem();
+void SetItem();	
 void GameOver();
+void run();
 
 Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 호출.
 	Snake *fb = s;		//생성될 스네이크 몸의 프론트 바디 주소.
@@ -82,41 +95,61 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	switch (stage)
 	{
 	case 1:
-		for(int i=0; i<map_rows; i++){
-			for(int j=0; j<map_cols; j++){
-				if(i <= 1) map[i][j]++;
-				if(i >= map_rows-2) map[i][j]++;
-				if(j <= 1) map[i][j]++;
-				if(j >= map_cols-2) map[i][j]++;
-				if(i == map_rows/2 && j == map_cols/2) {
-					snakeVT.push_back(MakeSnake());
-					snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-					snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-				}
+	snake_length = 0;
+	get_GItem = 0;
+	get_PItem = 0;
+	get_Gate = 0;
+
+	ms_snake_length = 5;
+	ms_GItem = 5;
+	ms_PItem = 3;
+	ms_Gate = 3;
+
+	for(int i=0; i<map_rows; i++){
+		for(int j=0; j<map_cols; j++){
+			if(i <= 1) map[i][j]++;
+			if(i >= map_rows-2) map[i][j]++;
+			if(j <= 1) map[i][j]++;
+			if(j >= map_cols-2) map[i][j]++;
+			if(i == map_rows/2 && j == map_cols/2) {
+				snakeVT.push_back(MakeSnake());
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
 			}
 		}
-		break;
+	}
+	break;
 
 	case 2:
-		for(int i=0; i<map_rows; i++){
-			for(int j=0; j<map_cols; j++){
-				if(i <= 1) map[i][j]++;
-				if(i >= map_rows-2) map[i][j]++;
-				if(j <= 1) map[i][j]++;
-				if(j >= map_cols-2) map[i][j]++;
-				if(i > 1 && i < map_rows-2 && (i == j || i == map_cols-j) && !(i > map_rows/2-3 && i < map_rows/2+3)) map[i][j]++;
-				if(i == map_rows/2 && j == map_cols/2) {
-					snakeVT.push_back(MakeSnake());
-					snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-					snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-				}
+	snake_length = 0;
+	get_GItem = 0;
+	get_PItem = 0;
+	get_Gate = 0;
+
+	ms_snake_length = 10;
+	ms_GItem = 8;
+	ms_PItem = 5;
+	ms_Gate = 5;
+
+	for(int i=0; i<map_rows; i++){
+		for(int j=0; j<map_cols; j++){
+			if(i <= 1) map[i][j]++;
+			if(i >= map_rows-2) map[i][j]++;
+			if(j <= 1) map[i][j]++;
+			if(j >= map_cols-2) map[i][j]++;
+			if(i > 1 && i < map_rows-2 && (i == j || i == map_cols-j) && !(i > map_rows/2-3 && i < map_rows/2+3)) map[i][j]++;
+			if(i == map_rows/2 && j == map_cols/2) {
+				snakeVT.push_back(MakeSnake());
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
 			}
 		}
-		break;
+	}
+	break;
 	case 3:
-		break;
+	break;
 	case 4:
-		break;
+	break;
 
 	}
 		
@@ -128,13 +161,13 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 	if(map[snake.snake_rc.first][snake.snake_rc.second] == PItem){
 		snakeVT.pop_back();
 		snake_length--;
-		score--;
+		get_PItem++;
 		
 		if(snake_length < 3) GameOver(); //Game Over
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == GItem){
 		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
-		score++;
+		get_GItem++;
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == Wall){
 		GameOver(); // Game Over
@@ -158,7 +191,7 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 	}
 }
 
-void ShowMap(){
+void ShowGame(){
 	clear();
 	border('*','*','*','*','*','*','*','*');
 	start_color();
@@ -167,11 +200,21 @@ void ShowMap(){
 	init_pair(2, COLOR_RED, COLOR_GREEN);
 	init_pair(3, COLOR_WHITE, COLOR_BLACK);
 	bkgd(COLOR_PAIR(1));
+	VTmatchMap();
+	
 
-	GameMap = newwin(map_rows, map_cols, 3, 3);
+	refresh();
+	ShowMap();
+	ShowScore();
+	ShowMission();
+
+	getch();	
+}
+
+void ShowMap(){
+	GameMap = newwin(map_rows, map_cols, 2, 2);
 	wbkgd(GameMap, COLOR_PAIR(1));
 
-	VTmatchMap();
 	for(int i=1; i<map_rows-1; i++){
         for(int j=1; j<map_cols-1; j++){
 			if(map[i][j] == IWall || map[i][j] == Wall){
@@ -201,23 +244,57 @@ void ShowMap(){
             }
         }
     }
+	wrefresh(GameMap);
+}
 
-	GameScore = newwin(30, 30, 3, map_cols+3);
-	string tmp = to_string(score);
-    char const *score_char = tmp.c_str();
-
-
+void ShowScore(){
+	GameScore = newwin(7, 20, 3, map_cols+3);
+	wborder(GameScore, '*','*','*','*','*','*','*','*');
+	
 	wattron(GameMap,COLOR_PAIR(1));
-	mvwprintw(GameScore,1,1,"Score : ");
-	mvwprintw(GameScore,1,9,score_char);
+	mvwprintw(GameScore, 1, 3, "Score Board");
+	mvwprintw(GameScore, 2, 3, "B: %d / %d", snake_length, max_snake_length);
+	mvwprintw(GameScore, 3, 3, "+: %d", get_GItem);
+	mvwprintw(GameScore, 4, 3, "-: %d", get_PItem);
+	mvwprintw(GameScore, 5, 3, "G: %d", get_Gate);
 	wattroff(GameMap,COLOR_PAIR(1));
 
-	refresh();
-	wrefresh(GameMap);
 	wrefresh(GameScore);
-	getch();
+}
+
+void ShowMission(){
+	GameMission = newwin(7, 20, 10, map_cols+3);
+	wborder(GameMission, '*','*','*','*','*','*','*','*');
+
+	wattron(GameMission,COLOR_PAIR(1));
+	mvwprintw(GameMission, 1, 3, "Mission");
+	if(snake_length >= ms_snake_length)
+		mvwprintw(GameMission, 2, 3, "B: %d (v)", ms_snake_length);
+	else 
+		mvwprintw(GameMission, 2, 3, "B: %d ( )", ms_snake_length);
+
+	if(get_GItem >= ms_GItem)
+		mvwprintw(GameMission, 3, 3, "+: %d (v)", ms_GItem);
+	else 
+		mvwprintw(GameMission, 3, 3, "+: %d ( )", ms_GItem);
 	
-}	
+	if(get_PItem >= ms_PItem)
+		mvwprintw(GameMission, 4, 3, "-: %d (v)", ms_PItem);
+	else 
+		mvwprintw(GameMission, 4, 3, "-: %d ( )", ms_PItem);
+	
+	if(get_Gate >= ms_Gate)
+		mvwprintw(GameMission, 5, 3, "G: %d (v)", ms_Gate);
+	else 
+		mvwprintw(GameMission, 5, 3, "G: %d ( )", ms_Gate);
+	
+	if(snake_length >= ms_snake_length && get_GItem >= ms_GItem && get_PItem >= ms_PItem && get_Gate >= ms_Gate){
+		stage++;
+		SetMap();
+	}
+	wattroff(GameMission,COLOR_PAIR(1));
+	wrefresh(GameMission);
+}
 
 void MoveSnake(){
 	timeout(0);
@@ -316,7 +393,22 @@ void SetItem(){
 }
 
 void GameOver(){
-	game_state = false;
+	clear();
+	border('*','*','*','*','*','*','*','*');
+	game_running = false;
+	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
+	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
+	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
+	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	
+	wattron(GameEnd,COLOR_PAIR(1));
+	mvwprintw(GameEnd, sizeR/2, sizeC/2-4, "GameOver");
+	wattroff(GameEnd,COLOR_PAIR(1));
+
+	refresh();
+	wrefresh(GameEnd);
+
+	sleep(100);
 	endwin();
 }
 
@@ -325,19 +417,19 @@ void run(){
 	
 	initscr();
 	
-	resize_term(map_rows+50, map_cols+50);
+	resize_term(map_rows+3, map_cols+25);
 	SetMap();
-	ShowMap();
+	ShowGame();
 
 	noecho();
   	curs_set(0);
 
-	while(game_state){
-		if(tick % 30 == 0){
+	while(game_running){
+		if(tick % 10 == 0){
 			MakeItem();
 		}
 		MoveSnake();
-		ShowMap();
+		ShowGame();
 		tick++;
 	}
 	endwin();
@@ -345,6 +437,5 @@ void run(){
 
 int main(){
 	run();
-	cout << error;
 	return 0;
 }
