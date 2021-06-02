@@ -112,7 +112,9 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	for(int i=0; i<map_rows; i++)
 		for(int j=0; j<map_cols; j++)
 			map[i][j]=0;
-
+	snakeVT.clear();
+	gateVT.clear();
+	
 	switch (stage)
 	{
 	case 1:
@@ -142,8 +144,6 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	break;
 
 	case 2:
-	snakeVT.clear();
-	gateVT.clear();
 	snake_length = 0;
 	get_GItem = 0;
 	get_PItem = 0;
