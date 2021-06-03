@@ -20,6 +20,12 @@ using namespace std;
 #define PItem 6
 #define Gate 7
 
+string choices[] = { 
+			"Game Start",
+			"Game Manual",
+			"Producers",
+			"Exit",
+		  };
 int snake_length;
 int max_snake_length = 20;
 int get_GItem;
@@ -36,12 +42,15 @@ int tick = 0;		//뱀의 움직임과 아이템 생성에 영향을 미치는 틱
 int Gtick = 0;		//게이트 생성에 영향을 미치는 틱
 
 bool game_running = true;
+bool menu_running = true;
 int stage = 1;
 
 WINDOW *GameMap;
 WINDOW *GameScore;
 WINDOW *GameMission;
 WINDOW *GameEnd;
+WINDOW *MenuWin;
+WINDOW *SubMenu;
 
 class Snake {		//뱀의 길이가 늘어날 때 필요한 클래스.
 public:
@@ -94,7 +103,12 @@ void MissionComplete();
 void MakeGate();
 void SetGate();
 void GetGate();
+int menu();
+void print_menu(int thing);
 void run();
+void GameInit();
+void munual();
+void producers();
 
 Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 호출.
 	Snake *fb = s;		//생성될 스네이크 몸의 프론트 바디 주소.
@@ -113,6 +127,7 @@ Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 �
 
 void SetMap(){		// 처음에 뱀과 맵을 구현.
 	clear();
+    GameInit();
 	for(int i=0; i<map_rows; i++)
 		for(int j=0; j<map_cols; j++)
 			map[i][j]=0;
@@ -224,7 +239,7 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 			if(j <= 1) map[i][j]++;
 			if(j >= map_cols-2) map[i][j]++;
 
-			if(i > 1 && i < map_rows-2 &&  j%3 == 0 && i%4 != 0) map[i][j]++;
+			if(i > 2 && i < map_rows-2 &&  j%3 == 0 && i%4 != 0) map[i][j]++;
 			if(i == map_rows/2 && j == map_cols/2) {
 				snakeVT.push_back(MakeSnake());
 				snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
@@ -240,7 +255,6 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 }
 
 void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 동기화하는 코드. 
-
 	Snake snake = snakeVT.front();
 	if(map[snake.snake_rc.first][snake.snake_rc.second] == PItem){
 		snakeVT.pop_back();
@@ -286,8 +300,9 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 
 void ShowGame(){
 	clear();
-	border('*','*','*','*','*','*','*','*');
-	start_color();
+    
+    resize_term(map_rows+3, map_cols+25);
+    box(stdscr, 0, 0);
 
 	init_pair(1, COLOR_BLUE, COLOR_BLACK);
 	init_pair(2, COLOR_RED, COLOR_GREEN);
@@ -349,7 +364,7 @@ void ShowMap(){
 
 void ShowScore(){
 	GameScore = newwin(8, 20, 3, map_cols+3);
-	wborder(GameScore, '*','*','*','*','*','*','*','*');
+    box(GameScore, 0, 0);
 	
 	wattron(GameMap,COLOR_PAIR(1));
 	mvwprintw(GameScore, 1, 3, "Score Board");
@@ -365,8 +380,8 @@ void ShowScore(){
 
 void ShowMission(){
 	GameMission = newwin(7, 20, 11, map_cols+3);
-	wborder(GameMission, '*','*','*','*','*','*','*','*');
-	
+	box(GameMission, 0, 0);
+
 	mvwprintw(GameMission, 1, 3, "Mission");
 	if(snake_length >= ms_snake_length){
 		wattron(GameMission,COLOR_PAIR(4));
@@ -400,13 +415,13 @@ void ShowMission(){
 	else 
 		mvwprintw(GameMission, 5, 3, "G: %d ( )", ms_Gate);
 		
-	
+	wrefresh(GameMission);
+
 	if(snake_length >= ms_snake_length && get_GItem >= ms_GItem && get_PItem >= ms_PItem && get_Gate >= ms_Gate){
 		stage++;
 		MissionComplete();
 		SetMap();
 	}
-	wrefresh(GameMission);
 }
 
 void MoveSnake(){
@@ -507,62 +522,57 @@ void SetItem(){
 
 void GameOver(){
 	clear();
-	border('*','*','*','*','*','*','*','*');
 	game_running = false;
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
 	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
 	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
-	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	box(GameEnd, 0, 0);
 	
-	wattron(GameEnd,COLOR_PAIR(1));
+	wattron(GameEnd,COLOR_PAIR(5));
 	mvwprintw(GameEnd, sizeR/2, sizeC/2-4, "GameOver");
-	wattroff(GameEnd,COLOR_PAIR(1));
+	wattroff(GameEnd,COLOR_PAIR(5));
+    mvprintw((int)((map_rows+3)*2/3), (int)((map_cols+25)*1/2-7), "Press any key.");
 
 	refresh();
 	wrefresh(GameEnd);
-
-	sleep(5);
-	endwin();
+	wgetch(GameEnd);
 }
 
 void GameClear(){
 	clear();
-	border('*','*','*','*','*','*','*','*');
 	game_running = false;
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
 	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
 	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
-	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	box(GameEnd, 0, 0);
 	
-	wattron(GameEnd,COLOR_PAIR(1));
+	wattron(GameEnd,COLOR_PAIR(4));
 	mvwprintw(GameEnd, sizeR/2, sizeC/2-4, "GameClear");
-	wattroff(GameEnd,COLOR_PAIR(1));
+	wattroff(GameEnd,COLOR_PAIR(4));
+    mvprintw((int)((map_rows+3)*2/3), (int)((map_cols+25)*1/2-7), "Press any key.");
 
 	refresh();
 	wrefresh(GameEnd);
-
-	sleep(10);
-	endwin();	
+    wgetch(GameEnd);
 }
 
 void MissionComplete(){
 	clear();
-	border('*','*','*','*','*','*','*','*');
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
 	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
 	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
-	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	box(GameEnd, 0, 0);
 	
-	wattron(GameEnd,COLOR_PAIR(1));
+	wattron(GameEnd,COLOR_PAIR(4));
 	mvwprintw(GameEnd, sizeR/2-1, sizeC/2-7, "MissionComplete");
-	mvwprintw(GameEnd, sizeR/2+1, sizeC/2-7, "stage %d clear!", stage);
+	mvwprintw(GameEnd, sizeR/2+1, sizeC/2-7, "stage %d clear!", stage-1);
 	mvwprintw(GameEnd, sizeR/2+2, sizeC/2-7, "run time : %d", tick/2);
-	wattroff(GameEnd,COLOR_PAIR(1));
+	wattroff(GameEnd,COLOR_PAIR(4));
+    mvprintw((int)((map_rows+3)*2/3), (int)((map_cols+25)*1/2-7), "Press any key.");
 
 	refresh();
 	wrefresh(GameEnd);
-
-	sleep(5);
+    wgetch(GameEnd);
 }
 
 void MakeGate(){
@@ -703,15 +713,88 @@ void GetGate(){
 	}
 }
 
-void run(){	
-	initscr();
-	
-	resize_term(map_rows+3, map_cols+25);
-	SetMap();
-	ShowGame();
+int menu(){
+	int thing = 0;
+    bool choice_running = true;
+    int choice;
+    int c;
 
+	initscr();
+	clear();
 	noecho();
+	cbreak();
+		
+	MenuWin = newwin(6, 20, 1, 1);
+	keypad(MenuWin, TRUE);
+	refresh();
+	print_menu(thing);
+	while(choice_running){
+        c = wgetch(MenuWin);
+        switch(c){
+            case (int)'w':
+            case (int)'a':
+            if(thing == 0) thing = 3;
+            else thing -= 1;
+            break;
+
+            case (int)'s':
+            case (int)'d':
+            if(thing == 3) thing = 0;
+            else thing += 1;
+            break;
+
+            case 10:
+            choice = thing;
+            choice_running = false;
+            break;
+
+            default :
+            mvprintw(0, 0, "You can only use \'w\', \'a\', \'s\', \'d\' and \'Enter\'");
+            refresh();
+            break;
+        }
+        print_menu(thing);
+    }
+	//clrtoeol();
+	refresh();
+	endwin();
+
+    return choice;
+}
+
+void print_menu(int thing)
+{
+	int r = 1;
+    int c = 1;
+
+    char ch[100];
+    
+
+	box(MenuWin, 0, 0);
+	for(int i=0; i<sizeof(choices)/sizeof(*choices); i++){
+        strcpy(ch,choices[i].c_str());
+        if(i == thing){
+            wattron(MenuWin, A_REVERSE); 
+			mvwprintw(MenuWin, r, c, "%s", ch);
+			wattroff(MenuWin, A_REVERSE);
+        }
+        else 
+            mvwprintw(MenuWin, r, c, "%s", ch);
+        r++;
+    }
+	wrefresh(MenuWin);
+}
+
+void run(){	
+    stage = 1;
+	initscr();
+	start_color();
+	resize_term(map_rows+3, map_cols+25);
+    noecho();
   	curs_set(0);
+
+	SetMap();
+	ShowGame();	
 
 	while(game_running){
 		//뱀이 10번 움직이면 아이템 생성 (0.5초에 1번 움직이니까 5초 주기)
@@ -739,7 +822,78 @@ void run(){
 	endwin();
 }
 
+void GameInit(){
+    tick = 0;
+    Gtick = 0;
+
+    game_running = true;
+}
+
+void munual(){    
+    SubMenu = newwin(15, 80, 1, 1);
+
+	box(SubMenu, 0, 0);
+	mvwprintw(SubMenu, 1, 1, "Snake Game");
+	mvwprintw(SubMenu, 3, 1, "The goal of the game is to complete stage 4.");
+	mvwprintw(SubMenu, 4, 1, "Each stage has a mission to complete.");
+    mvwprintw(SubMenu, 5, 1, "Check the mission and clear the game!");
+    mvwprintw(SubMenu, 7, 1, "Use the 'w', 'a', 's', and 'd' keys to move the snake.");
+
+    mvwprintw(SubMenu, 9, 1, "[ X ]");
+    mvwprintw(SubMenu, 9, 7, "is Wall. Game over when it touches");
+
+    mvwprintw(SubMenu, 10, 1, "[ G ]");
+    mvwprintw(SubMenu, 10, 7, "is Growth Item. Eating this increases the length of the snake.");
+
+    mvwprintw(SubMenu, 11, 1, "[ P ]");
+    mvwprintw(SubMenu, 11, 7, "is Poison Item. Eating this decreases the length of the snake.");
+    mvwprintw(SubMenu, 12, 7, "Game over if snake length is less than 3.");
+    
+    mvwprintw(SubMenu, 13, 1, "[ O ]");
+    mvwprintw(SubMenu, 13, 7, "is Gate. You can use this to move to another gate.");
+
+    mvprintw(16, 2, "Press any key.");
+	refresh();
+	wrefresh(SubMenu);
+    wgetch(SubMenu);
+}
+
+void producers(){
+    SubMenu = newwin(9, 50, 1, 1);
+
+	box(SubMenu, 0, 0);
+	mvwprintw(SubMenu, 1, 1, "Snake Game Producers");
+	mvwprintw(SubMenu, 3, 1, "Kookmin univ. 20203129 Jeon Gyeongjin");
+    mvwprintw(SubMenu, 4, 1, "jeonkj0413@naver.com");
+	mvwprintw(SubMenu, 6, 1, "Kookmin univ. 20203114 Lee Minwoo");
+    mvwprintw(SubMenu, 7, 1, "lmw6996@naver.com");
+
+    mvprintw(10, 2, "Press any key.");
+	refresh();
+	wrefresh(SubMenu);
+    wgetch(SubMenu);
+}
+
 int main(){
-	run();
+    while(menu_running){
+        int choice = menu();
+        switch (choice)
+        {
+        case 0: //GameStart
+            run();
+            break;
+        case 1: //Game Manual
+            munual();
+            break;
+        case 2: //Producers
+            producers();
+            break;
+        case 3: //Exit
+            endwin();
+            menu_running = false;
+            break;
+        }
+    }
+
 	return 0;
 }
