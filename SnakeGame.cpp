@@ -627,7 +627,7 @@ void GetGate(){
 				snakeVT.front().dir = 'w';
 			}
 			else{
-				snakeVT.front().move(out_gate->gate_rc.first-1, out_gate->gate_rc.second);
+				snakeVT.front().move(out_gate->gate_rc.first, out_gate->gate_rc.second-1);
 				snakeVT.front().dir = 'a';
 			}
 			break;
