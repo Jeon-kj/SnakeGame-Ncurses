@@ -32,8 +32,10 @@ int ms_PItem;
 int ms_Gate;
 int pass_gate = 0;
 
+int tick = 0;		//뱀의 움직임과 아이템 생성에 영향을 미치는 틱
+int Gtick = 0;		//게이트 생성에 영향을 미치는 틱
+
 bool game_running = true;
-bool game_state;
 int stage = 1;
 
 WINDOW *GameMap;
@@ -87,6 +89,8 @@ void MoveSnake();
 void MakeItem();
 void SetItem();
 void GameOver();
+void GameClear();
+void MissionComplete();
 void MakeGate();
 void SetGate();
 void GetGate();
@@ -148,6 +152,8 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
+	tick = 0;
+	Gtick = 0;
 
 	ms_snake_length = 10;
 	ms_GItem = 8;
@@ -174,6 +180,8 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
+	tick = 0;
+	Gtick = 0;
 
 	ms_snake_length = 14;
 	ms_GItem = 11;
@@ -202,6 +210,8 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
+	tick = 0;
+	Gtick = 0;
 
 	ms_snake_length = 18;
 	ms_GItem = 14;
@@ -223,6 +233,9 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	    }
 	}
 	break;
+
+	case 5:
+	GameClear();
 	}
 }
 
@@ -239,7 +252,8 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 		if(snake_length < 3) GameOver();
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == GItem){
-		snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
+		if(snake_length != max_snake_length)		// 현재 길이가 최대 길이라면 생성하지 않음. 먹은 수만 늘어남.
+			snakeVT.push_back(MakeSnake(&snakeVT[snake_length-1]));
 		get_GItem++;
 		if(pass_gate != 0)
 			pass_gate++;
@@ -278,6 +292,8 @@ void ShowGame(){
 	init_pair(1, COLOR_BLUE, COLOR_BLACK);
 	init_pair(2, COLOR_RED, COLOR_GREEN);
 	init_pair(3, COLOR_WHITE, COLOR_BLACK);
+	init_pair(4, COLOR_GREEN, COLOR_BLACK);
+	init_pair(5, COLOR_RED, COLOR_BLACK);
 	bkgd(COLOR_PAIR(1));
 	VTmatchMap();
 	
@@ -332,7 +348,7 @@ void ShowMap(){
 }
 
 void ShowScore(){
-	GameScore = newwin(7, 20, 3, map_cols+3);
+	GameScore = newwin(8, 20, 3, map_cols+3);
 	wborder(GameScore, '*','*','*','*','*','*','*','*');
 	
 	wattron(GameMap,COLOR_PAIR(1));
@@ -341,42 +357,55 @@ void ShowScore(){
 	mvwprintw(GameScore, 3, 3, "+: %d", get_GItem);
 	mvwprintw(GameScore, 4, 3, "-: %d", get_PItem);
 	mvwprintw(GameScore, 5, 3, "G: %d", get_Gate);
+	mvwprintw(GameScore, 6, 3, "time: %d", tick/2);
 	wattroff(GameMap,COLOR_PAIR(1));
 
 	wrefresh(GameScore);
 }
 
 void ShowMission(){
-	GameMission = newwin(7, 20, 10, map_cols+3);
+	GameMission = newwin(7, 20, 11, map_cols+3);
 	wborder(GameMission, '*','*','*','*','*','*','*','*');
-
-	wattron(GameMission,COLOR_PAIR(1));
+	
 	mvwprintw(GameMission, 1, 3, "Mission");
-	if(snake_length >= ms_snake_length)
+	if(snake_length >= ms_snake_length){
+		wattron(GameMission,COLOR_PAIR(4));
 		mvwprintw(GameMission, 2, 3, "B: %d (v)", ms_snake_length);
+		wattroff(GameMission,COLOR_PAIR(4));
+	}
 	else 
 		mvwprintw(GameMission, 2, 3, "B: %d ( )", ms_snake_length);
 
-	if(get_GItem >= ms_GItem)
+	if(get_GItem >= ms_GItem){
+		wattron(GameMission,COLOR_PAIR(4));
 		mvwprintw(GameMission, 3, 3, "+: %d (v)", ms_GItem);
-	else 
+		wattroff(GameMission,COLOR_PAIR(4));
+	}
+	else
 		mvwprintw(GameMission, 3, 3, "+: %d ( )", ms_GItem);
 	
-	if(get_PItem >= ms_PItem)
+	if(get_PItem >= ms_PItem){
+		wattron(GameMission,COLOR_PAIR(4));
 		mvwprintw(GameMission, 4, 3, "-: %d (v)", ms_PItem);
-	else 
+		wattroff(GameMission,COLOR_PAIR(4));
+	}
+	else
 		mvwprintw(GameMission, 4, 3, "-: %d ( )", ms_PItem);
 	
-	if(get_Gate >= ms_Gate)
+	if(get_Gate >= ms_Gate){
+		wattron(GameMission,COLOR_PAIR(4));
 		mvwprintw(GameMission, 5, 3, "G: %d (v)", ms_Gate);
+		wattroff(GameMission,COLOR_PAIR(4));
+	}
 	else 
 		mvwprintw(GameMission, 5, 3, "G: %d ( )", ms_Gate);
+		
 	
 	if(snake_length >= ms_snake_length && get_GItem >= ms_GItem && get_PItem >= ms_PItem && get_Gate >= ms_Gate){
 		stage++;
+		MissionComplete();
 		SetMap();
 	}
-	wattroff(GameMission,COLOR_PAIR(1));
 	wrefresh(GameMission);
 }
 
@@ -492,8 +521,48 @@ void GameOver(){
 	refresh();
 	wrefresh(GameEnd);
 
-	sleep(100);
+	sleep(5);
 	endwin();
+}
+
+void GameClear(){
+	clear();
+	border('*','*','*','*','*','*','*','*');
+	game_running = false;
+	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
+	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
+	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
+	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	
+	wattron(GameEnd,COLOR_PAIR(1));
+	mvwprintw(GameEnd, sizeR/2, sizeC/2-4, "GameClear");
+	wattroff(GameEnd,COLOR_PAIR(1));
+
+	refresh();
+	wrefresh(GameEnd);
+
+	sleep(10);
+	endwin();	
+}
+
+void MissionComplete(){
+	clear();
+	border('*','*','*','*','*','*','*','*');
+	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
+	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
+	GameEnd = newwin(sizeR, sizeC, (int)((map_rows+3)*1/3), (int)((map_cols+25)*1/3));
+	wborder(GameEnd, '*','*','*','*','*','*','*','*');
+	
+	wattron(GameEnd,COLOR_PAIR(1));
+	mvwprintw(GameEnd, sizeR/2-1, sizeC/2-7, "MissionComplete");
+	mvwprintw(GameEnd, sizeR/2+1, sizeC/2-7, "stage %d clear!", stage);
+	mvwprintw(GameEnd, sizeR/2+2, sizeC/2-7, "run time : %d", tick/2);
+	wattroff(GameEnd,COLOR_PAIR(1));
+
+	refresh();
+	wrefresh(GameEnd);
+
+	sleep(5);
 }
 
 void MakeGate(){
@@ -634,10 +703,7 @@ void GetGate(){
 	}
 }
 
-void run(){
-    int tick = 0;		//뱀의 움직임과 아이템 생성에 영향을 미치는 틱
-	int Gtick = 0;		//게이트 생성에 영향을 미치는 틱
-	
+void run(){	
 	initscr();
 	
 	resize_term(map_rows+3, map_cols+25);
@@ -648,19 +714,25 @@ void run(){
   	curs_set(0);
 
 	while(game_running){
-		if(tick % 10 == 0)		//뱀이 10번 움직이면 아이템 생성 (0.5초에 1번 움직이니까 5초 주기)
+		//뱀이 10번 움직이면 아이템 생성 (0.5초에 1번 움직이니까 5초 주기)
+		if(tick % 10 == 0)		
 			MakeItem();
-		
-		if(Gtick % 20 == 0 && pass_gate == 0)		//뱀이 게이트를 지나지 않을 때, 재생성.
+
+		//뱀이 게이트를 지나지 않을 때, 생성. 		
+		if(Gtick % 20 == 0 && pass_gate == 0 && tick > 20)
 			MakeGate();
-		
+
 		MoveSnake();
 		ShowGame();
-		if(pass_gate != 0)		//뱀이 움직일 때마다 게이트 이용해야하는 몸의 길이는 줄어들음.
+		
+		//뱀이 움직일 때마다 게이트 이용해야하는 몸의 길이는 줄어들음.
+		if(pass_gate != 0)		
 			pass_gate--;
 
-		if((Gtick+1) % 20 != 0 || pass_gate == 0)		//게이트가 바뀔 때가 됐는데 뱀이 게이트를 지날때는 Gtick이 오르지 않는다.
-			Gtick++;								//뱀이 다 지나가면 바로 게이트가 바뀌도록.
+		//게이트가 바뀔 때가 됐는데 뱀이 게이트를 지날때는 Gtick이 오르지 않는다.
+		//뱀이 다 지나가면 바로 게이트가 바뀌도록. (생성 조건 -> 게임 시작 10초 이후)
+		if((Gtick+1) % 20 != 0 || pass_gate == 0 && tick > 20)		
+			Gtick++;						
 
 		tick++;
 	}
