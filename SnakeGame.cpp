@@ -279,22 +279,21 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 		GetGate();
 		pass_gate = snake_length;
 	}
-	else if(map[snake.snake_rc.first][snake.snake_rc.second] == SBody){
-		GameOver(); // 이거 왜 안 되지?? 이거 안 돼서 저기 아래, 12 행 아래 처리해줌.
-		//GameOver();
-		//if(snakeVT.back().snake_rc != make_pair(snake.snake_rc.first, snake.snake_rc.second))
-		// Game Over But if SBody == tail, Keep Going
-	}
+	
+	// 머리가 몸쪽을 향할 때의 게임 오버는, 위처럼 맵을 기준으로 하기엔 무리가 있다. 
+	// 왜냐하면 moveSnake에서 몸을 이동하면서 기존의 map에 담겨있는 숫자를 0으로 초기화시키기 때문이다.
+	// 머리가 몸쪽을 향할 때, 또는 반대 방향의 키를 누를 때 게임오버.
+	auto it = snakeVT.begin()+1;
+	for(; it != snakeVT.end(); it++)
+		if(snake.snake_rc.first == it->snake_rc.first && snake.snake_rc.second == it->snake_rc.second)
+			GameOver();
 
 	for(int i = 0; i<snake_length; i++){
 		snake = snakeVT[i];
-		if(snake.body_no == 1){
+		if(snake.body_no == 1)
 			map[snake.snake_rc.first][snake.snake_rc.second] = SHead;
-		}
-		else{
-			if(map[snake.snake_rc.first][snake.snake_rc.second] == SBody) GameOver(); //여기에.
-			else map[snake.snake_rc.first][snake.snake_rc.second] = SBody;
-		}
+		else
+			map[snake.snake_rc.first][snake.snake_rc.second] = SBody;
 	}
 }
 
@@ -441,53 +440,48 @@ void MoveSnake(){
 	}
 
 	Snake *snake = &snakeVT.front();
-	if(snake->dir == 'w' && ch == 's') GameOver();
-	else if(snake->dir == 'd' && ch == 'a') GameOver();
-	else if(snake->dir == 'a' && ch == 'd') GameOver();
-	else if(snake->dir == 's' && ch == 'w') GameOver();
-	else{
-		char before_dir = snake->dir;
-		char tmp_dir = snake->dir;
+	
+	char before_dir = snake->dir;
+	char tmp_dir = snake->dir;
 
-		pair<int, int> before_rc = make_pair(snake->snake_rc.first, snake->snake_rc.second);
-		pair<int, int> tmp = make_pair(snake->snake_rc.first, snake->snake_rc.second);
+	pair<int, int> before_rc = make_pair(snake->snake_rc.first, snake->snake_rc.second);
+	pair<int, int> tmp = make_pair(snake->snake_rc.first, snake->snake_rc.second);
 
-		snake->dir = ch;
+	snake->dir = ch;
 
-		for(int i=0; i<snake_length; i++){
-			map[snake->snake_rc.first][snake->snake_rc.second] = 0;
-			if(i>0){
-				tmp = make_pair(snake->snake_rc.first, snake->snake_rc.second);
-				snake->move(before_rc.first, before_rc.second);
+	for(int i=0; i<snake_length; i++){
+		map[snake->snake_rc.first][snake->snake_rc.second] = 0;
+		if(i>0){
+			tmp = make_pair(snake->snake_rc.first, snake->snake_rc.second);
+			snake->move(before_rc.first, before_rc.second);
 
-				tmp_dir = snake->dir;
-				snake->dir = before_dir;
-			}
-			else{
-				switch(snake->dir){
-					case 'w':
-						snake->move(snake->snake_rc.first-1, snake->snake_rc.second);
-						break;
-
-					case 'd':
-						snake->move(snake->snake_rc.first, snake->snake_rc.second+1);
-						break;
-					
-					case 's':
-						snake->move(snake->snake_rc.first+1, snake->snake_rc.second);
-						break;
-
-					case 'a':
-						snake->move(snake->snake_rc.first, snake->snake_rc.second-1);
-						break;
-				}
-			}
-
-			before_dir = tmp_dir;
-			before_rc = tmp;
-			snake = &snakeVT[i+1];
+			tmp_dir = snake->dir;
+			snake->dir = before_dir;
 		}
-	}	
+		else{
+			switch(snake->dir){
+				case 'w':
+					snake->move(snake->snake_rc.first-1, snake->snake_rc.second);
+					break;
+
+				case 'd':
+					snake->move(snake->snake_rc.first, snake->snake_rc.second+1);
+					break;
+					
+				case 's':
+					snake->move(snake->snake_rc.first+1, snake->snake_rc.second);
+					break;
+
+				case 'a':
+					snake->move(snake->snake_rc.first, snake->snake_rc.second-1);
+					break;
+			}
+		}
+
+		before_dir = tmp_dir;
+		before_rc = tmp;
+		snake = &snakeVT[i+1];
+	}
 }
 
 void MakeItem(){
