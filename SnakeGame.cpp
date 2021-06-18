@@ -1,8 +1,8 @@
 #include<ncurses.h>
 #include<iostream>
-#include<locale.h>
+//#include<locale.h>
 #include<vector>
-#include <unistd.h>
+//#include <unistd.h>
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -20,7 +20,7 @@ using namespace std;
 #define PItem 6
 #define Gate 7
 
-string choices[] = { 
+string choices[] = { // 메뉴에 나올 선택지들.
 			"Game Start",
 			"Game Manual",
 			"Producers",
@@ -28,36 +28,38 @@ string choices[] = {
 		  };
 int snake_length;
 int max_snake_length = 20;
+int map[map_rows][map_cols]={0};
+// 획득 또는 활용 수.
 int get_GItem;
 int get_PItem;
 int get_Gate;
-int map[map_rows][map_cols]={0};
-int ms_snake_length;
+// 달성해야 하는 뱀의 길이를 담을 미션 변수.
+int ms_snake_length;		
 int ms_GItem;
 int ms_PItem;
 int ms_Gate;
-int pass_gate = 0;
-
+int pass_gate = 0;		// 게이트를 통과하고 있는 남은 몸의 수
 int tick = 0;		//뱀의 움직임과 아이템 생성에 영향을 미치는 틱
 int Gtick = 0;		//게이트 생성에 영향을 미치는 틱
 
-bool game_running = true;
-bool menu_running = true;
+bool game_running = true;		// run 함수의 while 문을 돌리는 변수.
+bool menu_running = true;		// main 함수의 while 문을 돌리는 변수.
 int stage = 1;
+int lose_reason; 		// 게임 오버의 이유.
 
-WINDOW *GameMap;
-WINDOW *GameScore;
-WINDOW *GameMission;
-WINDOW *GameEnd;
-WINDOW *MenuWin;
-WINDOW *SubMenu;
+WINDOW *GameMap;		// 뱀이 움직이는 모습이 나타날 윈도우
+WINDOW *GameScore;		// 점수가 나타날 윈도우
+WINDOW *GameMission;	// 미션이 나타날 윈도우
+WINDOW *GameEnd;		// 게임이 끝날 때 나타나는 윈도우
+WINDOW *MenuWin;		// 메뉴가 나타날 윈도우
+WINDOW *SubMenu;		// 메뉴 윈도우에서 선택 시 나타나는 윈도우
 
-class Snake {		//뱀의 길이가 늘어날 때 필요한 클래스.
+class Snake {		//뱀의 길이가 늘어날 때 필요한 클래스
 public:
 	int body_no;
-	Snake *frontBody;
-	Snake *backBody;
-	pair<int, int> snake_rc;
+	Snake *frontBody;	// 앞의 몸 주소를 저장
+	Snake *backBody;	// 뒤의 몸 주소를 저장
+	pair<int, int> snake_rc;	// map 상의 몸 위치
 	char dir = 'w'; // wasd (머리의 방향)
 
 	void init(pair<int, int>rc, Snake *front = nullptr, Snake *back = nullptr){
@@ -77,8 +79,8 @@ public:
 
 class GateC {
 public:
-	pair<int, int> gate_rc;
-	string wall_dir = "wasd";
+	pair<int, int> gate_rc;		// map 상의 게이트 위치
+	string wall_dir = "wasd";	// 게이트 이동 시 뱀이 나오는 위치 결정할 때 사용.
 
 	void init(int row, int col){
 		gate_rc = make_pair(row, col);
@@ -110,11 +112,12 @@ void GameInit();
 void munual();
 void producers();
 
-Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 호출.
+Snake& MakeSnake(Snake *s = nullptr){ //뱀의 길이가 늘어날 때 마다 호출. 만든 뱀의 주소를 반환.
 	Snake *fb = s;		//생성될 스네이크 몸의 프론트 바디 주소.
 
 	Snake *snake = new Snake;
 	
+	// 생성하는 뱀 몸의 초기 위치를 설정.
 	if(fb == nullptr) snake->init(make_pair(map_rows/2, map_cols/2), nullptr);
 	else if(fb->dir == 'w') snake->init(make_pair(fb->snake_rc.first+1, fb->snake_rc.second), fb);
 	else if(fb->dir == 'd') snake->init(make_pair(fb->snake_rc.first, fb->snake_rc.second-1), fb);
@@ -125,15 +128,11 @@ Snake& MakeSnake(Snake *s = nullptr){		//뱀의 길이가 늘어날 때 마다 �
 	return *snake;
 }
 
-void SetMap(){		// 처음에 뱀과 맵을 구현.
+void SetMap(){ // 처음에 뱀과 맵을 구현.
 	clear();
     GameInit();
-	for(int i=0; i<map_rows; i++)
-		for(int j=0; j<map_cols; j++)
-			map[i][j]=0;
-	snakeVT.clear();
-	gateVT.clear();
 	
+	// 스테이지와 스테이지 마다 다른 미션들과 맵 설정.
 	switch (stage)
 	{
 	case 1:
@@ -167,8 +166,6 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
-	tick = 0;
-	Gtick = 0;
 
 	ms_snake_length = 10;
 	ms_GItem = 8;
@@ -195,8 +192,6 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
-	tick = 0;
-	Gtick = 0;
 
 	ms_snake_length = 14;
 	ms_GItem = 11;
@@ -225,8 +220,6 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	get_GItem = 0;
 	get_PItem = 0;
 	get_Gate = 0;
-	tick = 0;
-	Gtick = 0;
 
 	ms_snake_length = 18;
 	ms_GItem = 14;
@@ -254,8 +247,10 @@ void SetMap(){		// 처음에 뱀과 맵을 구현.
 	}
 }
 
-void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 동기화하는 코드. 
+void VTmatchMap(){ //뱀을 벡터로 저장해뒀는데, 그걸 map 배열에 동기화하는 코드. 
 	Snake snake = snakeVT.front();
+
+	// 아이템을 먹었을 때와 게이트를 탔을 때, 벽에 부딪혔을 때 상황 처리.
 	if(map[snake.snake_rc.first][snake.snake_rc.second] == PItem){
 		snakeVT.pop_back();
 		snake_length--;
@@ -263,7 +258,10 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 		if(pass_gate != 0)
 			pass_gate--;
 		
-		if(snake_length < 3) GameOver();
+		if(snake_length < 3){
+			lose_reason = 1;
+			GameOver();
+		} 
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == GItem){
 		if(snake_length != max_snake_length)		// 현재 길이가 최대 길이라면 생성하지 않음. 먹은 수만 늘어남.
@@ -273,6 +271,7 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 			pass_gate++;
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == Wall){
+		lose_reason = 2;
 		GameOver();
 	}
 	else if(map[snake.snake_rc.first][snake.snake_rc.second] == Gate){
@@ -280,14 +279,15 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 		pass_gate = snake_length;
 	}
 	
-	// 머리가 몸쪽을 향할 때의 게임 오버는, 위처럼 맵을 기준으로 하기엔 무리가 있다. 
-	// 왜냐하면 moveSnake에서 몸을 이동하면서 기존의 map에 담겨있는 숫자를 0으로 초기화시키기 때문이다.
 	// 머리가 몸쪽을 향할 때, 또는 반대 방향의 키를 누를 때 게임오버.
 	auto it = snakeVT.begin()+1;
 	for(; it != snakeVT.end(); it++)
-		if(snake.snake_rc.first == it->snake_rc.first && snake.snake_rc.second == it->snake_rc.second)
+		if(snake.snake_rc.first == it->snake_rc.first && snake.snake_rc.second == it->snake_rc.second){
+			lose_reason = 3;
 			GameOver();
+		}
 
+	// 뱀 벡터 원소들의 위치를 map에 대입시킴.
 	for(int i = 0; i<snake_length; i++){
 		snake = snakeVT[i];
 		if(snake.body_no == 1)
@@ -297,7 +297,7 @@ void VTmatchMap(){		//뱀을 벡터로 저장해뒀는데, 그걸 맵 배열에 
 	}
 }
 
-void ShowGame(){
+void ShowGame(){ // 게임 화면을 보여주는 함수들을 호출함.
 	clear();
     
     resize_term(map_rows+3, map_cols+25);
@@ -320,7 +320,7 @@ void ShowGame(){
 	getch();	
 }
 
-void ShowMap(){
+void ShowMap(){ // GameMap 윈도우에 뱀과 각종 아이템들, 벽 등이 나타남.
 	GameMap = newwin(map_rows, map_cols, 2, 2);
 	wbkgd(GameMap, COLOR_PAIR(1));
 
@@ -361,7 +361,7 @@ void ShowMap(){
 	wrefresh(GameMap);
 }
 
-void ShowScore(){
+void ShowScore(){ // GameScore 윈도우에 점수를 표시함.
 	GameScore = newwin(8, 20, 3, map_cols+3);
     box(GameScore, 0, 0);
 	
@@ -377,7 +377,7 @@ void ShowScore(){
 	wrefresh(GameScore);
 }
 
-void ShowMission(){
+void ShowMission(){ // GameMission 윈도우에 달성해야할 미션과 달성 정도를 나타냄.
 	GameMission = newwin(7, 20, 11, map_cols+3);
 	box(GameMission, 0, 0);
 
@@ -423,24 +423,26 @@ void ShowMission(){
 	}
 }
 
-void MoveSnake(){
+void MoveSnake(){ // 키를 입력받고 뱀을 움직임.
 	timeout(0);
 	int bft = clock();
 	int aft = clock();
 	char ch=getch();
 
-	while(aft - bft < 500000){
+
+	while(aft - bft < 500000){ //0.5초 간 입력을 받음.
 		aft = clock();
 		if(ch != 'w' && ch != 'a' && ch != 's' && ch != 'd')
 			ch = getch();
 	}
 	
-	if(ch != 'w' && ch != 'a' && ch != 's' && ch != 'd'){
+	if(ch != 'w' && ch != 'a' && ch != 's' && ch != 'd'){ // 입력이 없으면 이전 값 그대로 사용.
 		ch = snakeVT.front().dir;
 	}
 
 	Snake *snake = &snakeVT.front();
 	
+	// before은 뒤의 몸에게 넘길 변경 전 자신의 정보, tmp는 before의 정보를 받기 전 뒤의 몸에게 넘길 자신의 정보를 저장할 변수.
 	char before_dir = snake->dir;
 	char tmp_dir = snake->dir;
 
@@ -451,13 +453,17 @@ void MoveSnake(){
 
 	for(int i=0; i<snake_length; i++){
 		map[snake->snake_rc.first][snake->snake_rc.second] = 0;
-		if(i>0){
+
+		// 머리가 아닌 몸체의 경우 원래 앞이 있던 위치를 자신의 위치로 대입.
+		if(i>0){ 
+			// tmp에는 뒤의 몸에 넘겨줄 자신의 정보를 담고, 자신은 before(변경 전 앞의 몸)의 정보를 갖는다.
 			tmp = make_pair(snake->snake_rc.first, snake->snake_rc.second);
 			snake->move(before_rc.first, before_rc.second);
 
 			tmp_dir = snake->dir;
 			snake->dir = before_dir;
 		}
+		// 머리의 경우, 이동하는 방향에 따라 현재 위치에서 이동함.
 		else{
 			switch(snake->dir){
 				case 'w':
@@ -484,7 +490,7 @@ void MoveSnake(){
 	}
 }
 
-void MakeItem(){
+void MakeItem(){ // 이전에 생성된 아이템을 없애고, 다시 아이템을 만드는 함수를 호출하는 함수.
     for(int r=0; r<map_rows; r++)
         for(int c=0; c<map_cols; c++)
             if(map[r][c]==GItem || map[r][c]==PItem)
@@ -494,7 +500,7 @@ void MakeItem(){
         SetItem();
 }
 
-void SetItem(){
+void SetItem(){ // 랜덤으로 아이템을 생성하는 함수.
 	while(1){
 		int row, col;
 
@@ -514,7 +520,7 @@ void SetItem(){
 	}
 }
 
-void GameOver(){
+void GameOver(){ // GameEnd 윈도우를 불러와 게임오버 했음을 알림.
 	clear();
 	game_running = false;
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
@@ -523,7 +529,22 @@ void GameOver(){
 	box(GameEnd, 0, 0);
 	
 	wattron(GameEnd,COLOR_PAIR(5));
-	mvwprintw(GameEnd, sizeR/2, sizeC/2-4, "GameOver");
+	mvwprintw(GameEnd, sizeR/2-2, sizeC/2-4, "GameOver");
+	switch (lose_reason){
+		case 1:
+		mvwprintw(GameEnd, sizeR/2+1, sizeC/2-4, "The snake");
+		mvwprintw(GameEnd, sizeR/2+2, sizeC/2-6, "is poisoned!");
+		break;
+		case 2:
+		mvwprintw(GameEnd, sizeR/2+1, sizeC/2-4, "The snake");
+		mvwprintw(GameEnd, sizeR/2+2, sizeC/2-6, "hit the wall!");
+		break;
+		case 3:
+		mvwprintw(GameEnd, sizeR/2+1, sizeC/2-4, "The snake");
+		mvwprintw(GameEnd, sizeR/2+2, sizeC/2-6, "ate its body!");
+		break;
+	}
+
 	wattroff(GameEnd,COLOR_PAIR(5));
     mvprintw((int)((map_rows+3)*2/3), (int)((map_cols+25)*1/2-7), "Press any key.");
 
@@ -532,7 +553,7 @@ void GameOver(){
 	wgetch(GameEnd);
 }
 
-void GameClear(){
+void GameClear(){ // GameEnd 윈도우를 불러와 게임클리어 했음을 알림.
 	clear();
 	game_running = false;
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
@@ -550,7 +571,7 @@ void GameClear(){
     wgetch(GameEnd);
 }
 
-void MissionComplete(){
+void MissionComplete(){ // GameEnd 윈도우를 불러와 미션클리어 했음을 알림.
 	clear();
 	int sizeR = (int)(((map_rows+3)*2/3)-((map_rows+3)*1/3));
 	int sizeC = (int)(((map_cols+25)*2/3)-((map_cols+25)*1/3));
@@ -558,7 +579,8 @@ void MissionComplete(){
 	box(GameEnd, 0, 0);
 	
 	wattron(GameEnd,COLOR_PAIR(4));
-	mvwprintw(GameEnd, sizeR/2-1, sizeC/2-7, "MissionComplete");
+	mvwprintw(GameEnd, sizeR/2-2, sizeC/2-3, "Mission");
+	mvwprintw(GameEnd, sizeR/2-1, sizeC/2-4, "Complete");
 	mvwprintw(GameEnd, sizeR/2+1, sizeC/2-7, "stage %d clear!", stage-1);
 	mvwprintw(GameEnd, sizeR/2+2, sizeC/2-7, "run time : %d", tick/2);
 	wattroff(GameEnd,COLOR_PAIR(4));
@@ -569,7 +591,7 @@ void MissionComplete(){
     wgetch(GameEnd);
 }
 
-void MakeGate(){
+void MakeGate(){ // 이전에 생성된 게이트를 없애고, 다시 게이트를 만드는 함수를 호출하는 함수.
 	while(!gateVT.empty()){
 		map[gateVT.back().gate_rc.first][gateVT.back().gate_rc.second] = Wall;
 		gateVT.pop_back();
@@ -579,7 +601,7 @@ void MakeGate(){
         SetGate();
 }
 
-void SetGate(){
+void SetGate(){ // 랜덤으로 게이트를 생성하는 함수.
 	while(1){
 		int row, col;
 		GateC *gate = new GateC;
@@ -601,12 +623,16 @@ void SetGate(){
 	}
 }
 
-void GetGate(){
+void GetGate(){ // 뱀의 머리가 게이트에 도착했을 때, 이벤트 처리 함수
 	get_Gate++;
 	GateC *out_gate;
+
+	// 두 개의 게이트 중, 입구와 출구를 구분.
 	if(snakeVT.front().snake_rc == gateVT.front().gate_rc) out_gate = &gateVT.back();
 	else if(snakeVT.front().snake_rc == gateVT.back().gate_rc) out_gate = &gateVT.front();
 
+	// 출구 게이트를 중심으로 4방을 살펴서 뱀이 나갈 방향을 정함.
+	// 벽이 있는 방향에 해당하는 문자를 Gate 객체의 wall_dir에서 지우는 방식을 사용.
 	out_gate->wall_dir = "wasd";
 	int row = out_gate->gate_rc.first;
 	int col = out_gate->gate_rc.second;
@@ -628,6 +654,7 @@ void GetGate(){
 		out_gate->wall_dir.erase(pos, 1);
 	}
 
+	// 뱀이 어느 방향으로 이동하는 지와 출구의 4방향 중 어디가 어떻게 막혀 있는 지에 따라 나갈 방향을 정함.
 	switch(snakeVT.front().dir){
 		case 'w':
 			if(out_gate->wall_dir.find('w') != -1){
@@ -707,7 +734,7 @@ void GetGate(){
 	}
 }
 
-int menu(){
+int menu(){ // MenuWin 윈도우에 게임 시작 전 메뉴를 표현하고, 선택할 수 있도록 한다.
 	int thing = 0;
     bool choice_running = true;
     int choice;
@@ -749,15 +776,13 @@ int menu(){
         }
         print_menu(thing);
     }
-	//clrtoeol();
 	refresh();
 	endwin();
 
     return choice;
 }
 
-void print_menu(int thing)
-{
+void print_menu(int thing){ // 메뉴 선택지를 나타내고, 현재 선택 중인 항목이 무엇인지 표시한다.
 	int r = 1;
     int c = 1;
 
@@ -779,7 +804,7 @@ void print_menu(int thing)
 	wrefresh(MenuWin);
 }
 
-void run(){	
+void run(){	// MakeItem()와 MakeGate(), MoveSnake(), ShowGame() 를 반복하여 게임을 진행한다.
     stage = 1;
 	initscr();
 	start_color();
@@ -816,14 +841,19 @@ void run(){
 	endwin();
 }
 
-void GameInit(){
+void GameInit(){ // 게임 시작에 앞서 게임 설정을 초기화 한다.
     tick = 0;
     Gtick = 0;
+	for(int i=0; i<map_rows; i++)
+		for(int j=0; j<map_cols; j++)
+			map[i][j]=0;
+	snakeVT.clear();
+	gateVT.clear();
 
     game_running = true;
 }
 
-void munual(){    
+void munual(){ // 메뉴에서 "Game Manual"를 선택하면 SubMenu 윈도우에 나타날 화면.
     SubMenu = newwin(15, 80, 1, 1);
 
 	box(SubMenu, 0, 0);
@@ -852,7 +882,7 @@ void munual(){
     wgetch(SubMenu);
 }
 
-void producers(){
+void producers(){ // 메뉴에서 "producers"를 선택하면 SubMenu 윈도우에 나타날 화면.
     SubMenu = newwin(9, 50, 1, 1);
 
 	box(SubMenu, 0, 0);
