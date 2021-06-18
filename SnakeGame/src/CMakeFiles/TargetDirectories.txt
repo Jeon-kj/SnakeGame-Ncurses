@@ -1,3 +1,0 @@
-/home/jeonkj/kmu2.1/cpp/SnakeGameProject/SnakeGame/src/CMakeFiles/edit_cache.dir
-/home/jeonkj/kmu2.1/cpp/SnakeGameProject/SnakeGame/src/CMakeFiles/rebuild_cache.dir
-/home/jeonkj/kmu2.1/cpp/SnakeGameProject/SnakeGame/src/CMakeFiles/snakeGame.dir

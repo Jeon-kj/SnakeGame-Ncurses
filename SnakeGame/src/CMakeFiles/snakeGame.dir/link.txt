@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/snakeGame.dir/snakeGame.cpp.o -o snakeGame  -lcurses /usr/lib/x86_64-linux-gnu/libform.so 
